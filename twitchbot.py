@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timedelta
 
 # Define your bot's credentials and channel here
-TMI_TOKEN = ""
-CLIENT_ID = ""
-BOT_NICK = ""
+TMI_TOKEN = "oauth:pjgtujppwlnfopi6lm30r33h64fzje"
+CLIENT_ID = "0ykm7wjf2lgurc4t1kxdu2ivaushnb"
+BOT_NICK = "smokeyxxl"
 BOT_PREFIX = "!"
-CHANNEL = ""
-SUMMONER = ""
-RIOT_API_TOKEN = ""
+CHANNEL = "virrivadilli"
+SUMMONER = "LvL 2 Crook"
+RIOT_API_TOKEN = "RGAPI-d368e2e7-533e-4aa7-9f1c-7b78306f22fe"
 
 
 class Bot(commands.Bot):
@@ -111,38 +111,55 @@ class Bot(commands.Bot):
         return result_acquired
 
     async def resolve_bets(self, outcome):
-        total_bet_amount = sum(
-            bet[0] for bet in self.bets.values()
-        )  # Total amount bet by everyone
-        total_winning_bets = sum(
-            bet[0] for bettor, bet in self.bets.items() if bet[1] == outcome
-        )
-
-        # If nobody won, skip the division to prevent division by zero
-        if total_winning_bets == 0:
-            await self.announce_no_winners()
-            return
-
-        # Calculate winnings for each winner
-        for bettor, bet in list(
-            self.bets.items()
-        ):  # Create a copy of the dictionary items
+        for bettor, bet in list(self.bets.items()):  # Iterate over a copy of all bets
             bet_amount, bet_outcome = bet
             if bet_outcome == outcome:
-                # Winner's share is proportionate to their bet relative to total winning bets
-                winner_share = (bet_amount / total_winning_bets) * total_bet_amount
-                # Update the user's balance with their winnings
-                self.user_balances[bettor]["balance"] += winner_share
-                await self.announce_winner(bettor, winner_share)
+                # If the user won, they receive twice their bet amount
+                winner_payout = bet_amount * 2
+                self.user_balances[bettor]["balance"] += winner_payout
+                await self.announce_winner(bettor, winner_payout)
             else:
                 # Losers have already had their bet amounts deducted when they placed their bet
                 await self.announce_loser(bettor)
 
-        # Announce the results here
-        channel = self.get_channel(CHANNEL)
-        await channel.send(f"The match has ended in a {outcome}!")
+        # Clear all bets after resolving them
         self.bets.clear()
+        # Save the updated user balances to file
         self.save_balances()
+
+    # async def resolve_bets(self, outcome):
+    #     total_bet_amount = sum(
+    #         bet[0] for bet in self.bets.values()
+    #     )  # Total amount bet by everyone
+    #     total_winning_bets = sum(
+    #         bet[0] for bettor, bet in self.bets.items() if bet[1] == outcome
+    #     )
+
+    #     # If nobody won, skip the division to prevent division by zero
+    #     if total_winning_bets == 0:
+    #         await self.announce_no_winners()
+    #         return
+
+    #     # Calculate winnings for each winner
+    #     for bettor, bet in list(
+    #         self.bets.items()
+    #     ):  # Create a copy of the dictionary items
+    #         bet_amount, bet_outcome = bet
+    #         if bet_outcome == outcome:
+    #             # Winner's share is proportionate to their bet relative to total winning bets
+    #             winner_share = (bet_amount / total_winning_bets) * total_bet_amount
+    #             # Update the user's balance with their winnings
+    #             self.user_balances[bettor]["balance"] += winner_share
+    #             await self.announce_winner(bettor, winner_share)
+    #         else:
+    #             # Losers have already had their bet amounts deducted when they placed their bet
+    #             await self.announce_loser(bettor)
+
+    #     # Announce the results here
+    #     channel = self.get_channel(CHANNEL)
+    #     await channel.send(f"The match has ended in a {outcome}!")
+    #     self.bets.clear()
+    #     self.save_balances()
 
     async def announce_winner(self, bettor, amount):
         channel = self.get_channel(CHANNEL)
@@ -234,6 +251,33 @@ class Bot(commands.Bot):
         }
         await ctx.send(f"{ctx.author.name}, you have farmed 3 rejuvenation beads.")
         self.save_balances()
+
+    @commands.command(name="top")
+    async def top(self, ctx):
+        # Make sure there are balances to sort and display
+        if not self.user_balances:
+            return await ctx.send("No users to display.")
+
+        # Retrieve and sort the balances in descending order
+        sorted_balances = sorted(
+            self.user_balances.items(),
+            key=lambda item: item[1]["balance"],
+            reverse=True,
+        )
+
+        # Create a message with the sorted balances
+        message = "Top balances:\n"
+        for index, (user, data) in enumerate(sorted_balances, start=1):
+            message += f"{index}. {user} - {data['balance']} rejuvenation beads\n"
+
+            # Send the message in chunks if it gets too long
+            if len(message) >= 400:  # Twitch messages have a limit
+                await ctx.send(message)
+                message = ""
+
+        # Send any remaining message part
+        if message:
+            await ctx.send(message)
 
     async def announce_bets_open(self):
         self.is_accepting_bets = True
