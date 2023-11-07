@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timedelta
 
 # Define your bot's credentials and channel here
-TMI_TOKEN = "oauth:pjgtujppwlnfopi6lm30r33h64fzje"
-CLIENT_ID = "0ykm7wjf2lgurc4t1kxdu2ivaushnb"
-BOT_NICK = "smokeyxxl"
+TMI_TOKEN = ""
+CLIENT_ID = ""
+BOT_NICK = ""
 BOT_PREFIX = "!"
-CHANNEL = "virrivadilli"
-SUMMONER = "LvL 2 Crook"
-RIOT_API_TOKEN = "RGAPI-931f4d8a-327e-49de-b070-1621e36c2e19"
+CHANNEL = ""
+SUMMONER = ""
+RIOT_API_TOKEN = ""
 
 
 class Bot(commands.Bot):
@@ -27,7 +27,7 @@ class Bot(commands.Bot):
         self.user_balances = {}
         self.is_accepting_bets = False
         self.summoner = SUMMONER
-        self.headers = {"X-Riot-Token": "RGAPI-931f4d8a-327e-49de-b070-1621e36c2e19"}
+        self.headers = {"X-Riot-Token": RIOT_API_TOKEN}
         self.gameId = None
 
     async def event_ready(self):
@@ -39,10 +39,11 @@ class Bot(commands.Bot):
             self.summonerPuuid = summonerjson["puuid"]
             print(f"Summoner ID: {self.summonerId}")
             print(f"Summoner PUUID: {self.summonerPuuid}")
+            self.load_balances()
         except Exception as e:
             print(f"Failed to retrieve Summoner ID: {e}")
             return  # Stop further execution if Summoner ID can't be retrieved
-        self.load_balances()
+
         self.loop.create_task(self.check_for_match())
 
     async def event_message(self, message):
@@ -94,7 +95,7 @@ class Bot(commands.Bot):
                     self.headers, self.gameId, self.summonerId
                 )
                 if participant.get("win") is not None:
-                    if participant["win"] == "True":
+                    if participant["win"] == "true":
                         await self.resolve_bets("win")
                     else:
                         await self.resolve_bets("loss")
@@ -131,7 +132,7 @@ class Bot(commands.Bot):
                 # Winner's share is proportionate to their bet relative to total winning bets
                 winner_share = (bet_amount / total_winning_bets) * total_bet_amount
                 # Update the user's balance with their winnings
-                self.user_balances[bettor] += winner_share
+                self.user_balances[bettor]["balance"] += winner_share
                 await self.announce_winner(bettor, winner_share)
             else:
                 # Losers have already had their bet amounts deducted when they placed their bet
@@ -162,11 +163,11 @@ class Bot(commands.Bot):
             return await ctx.send("Betting is currently closed.")
 
         if ctx.author.name not in self.user_balances:
-            self.user_balances[
-                ctx.author.name
-            ] = 100  # Give new users some starting currency
+            return await ctx.send(
+                "You are not registered. Use !register to start betting."
+            )
 
-        if amount <= 0 or amount > self.user_balances[ctx.author.name]:
+        if amount <= 0 or amount > self.user_balances[ctx.author.name]["balance"]:
             return await ctx.send("Invalid bet amount.")
 
         # Allow only "win" or "loss" as valid outcomes
@@ -175,38 +176,48 @@ class Bot(commands.Bot):
                 "Invalid outcome. You can only bet on 'win' or 'loss'."
             )
 
-        # Record the user's bet
         self.bets[ctx.author.name] = (amount, outcome)
-        # Deduct the bet amount from the user's balance
-        self.user_balances[ctx.author.name] -= amount
+        self.user_balances[ctx.author.name]["balance"] -= amount
         await ctx.send(f"{ctx.author.name} has bet {amount} on {outcome}!")
-
-        # Calculate the total amounts bet on each outcome
-        total_on_win = sum(
-            bet[0] for bettor, bet in self.bets.items() if bet[1] == "win"
-        )
-        total_on_loss = sum(
-            bet[0] for bettor, bet in self.bets.items() if bet[1] == "loss"
-        )
-
-        # Announce the total amounts bet on "win" and "loss"
-        await ctx.send(f"Total on win: {total_on_win}, Total on loss: {total_on_loss}")
 
     @commands.command(name="balance")
     async def balance(self, ctx):
         balance = self.user_balances.get(ctx.author.name, 0)
         await ctx.send(f"{ctx.author.name}, you have {balance} rejuvenation beads.")
 
-    @commands.command(name="farm")
-    async def farm(self, ctx):
-        current_time = datetime.utcnow()
-        user_data = self.user_balances.get(
-            ctx.author.name, {"balance": 0, "last_farm": None}
+    @commands.command(name="register")
+    async def register(self, ctx):
+        # Check if the user is already registered
+        if ctx.author.name in self.user_balances:
+            return await ctx.send("You are already registered!")
+
+        # Register the user with a starting balance of 100 beads
+        self.user_balances[ctx.author.name] = {
+            "balance": 100,
+            "last_farm": datetime.utcnow(),
+        }
+
+        # Acknowledge the registration
+        await ctx.send(
+            f"{ctx.author.name}, you have been registered with 100 rejuvenation beads!"
         )
 
-        # Check if the user has farmed before
-        if user_data["last_farm"]:
-            last_farm_time = user_data["last_farm"]
+        # Save the updated balances
+        self.save_balances()
+
+    @commands.command(name="farm")
+    async def farm(self, ctx):
+        if ctx.author.name not in self.user_balances:
+            return await ctx.send(
+                "You are not registered. Use !register to start farming."
+            )
+
+        current_time = datetime.utcnow()
+        user_data = self.user_balances[ctx.author.name]
+
+        # Check if the user exists and has farmed before
+        if user_data:
+            last_farm_time = datetime.fromisoformat(user_data["last_farm"])
             # Check if 24 hours have passed since the last farm
             if current_time - last_farm_time < timedelta(days=1):
                 time_diff = timedelta(days=1) - (current_time - last_farm_time)
@@ -217,12 +228,10 @@ class Bot(commands.Bot):
                 )
 
         # If the user is farming for the first time or 24 hours have passed
-        new_balance = user_data["balance"] + 3
         self.user_balances[ctx.author.name] = {
-            "balance": new_balance,
+            "balance": user_data["balance"] + 3 if user_data else 3,
             "last_farm": current_time,
         }
-
         await ctx.send(f"{ctx.author.name}, you have farmed 3 rejuvenation beads.")
         self.save_balances()
 
@@ -255,35 +264,23 @@ class Bot(commands.Bot):
         # Save to file
 
     def save_balances(self):
-        with open("user_data.json", "w") as f:
-            # Convert datetime objects to strings for JSON serialization
-            data_to_save = {
-                user: {
-                    "balance": data["balance"],
-                    "last_farm": data["last_farm"].isoformat()
-                    if data.get("last_farm")
-                    else None,
-                }
-                for user, data in self.user_balances.items()
-            }
-            json.dump(data_to_save, f)
+        # Convert datetime objects to string before saving to JSON
+        for user, data in self.user_balances.items():
+            if "last_farm" in data and isinstance(data["last_farm"], datetime):
+                data["last_farm"] = data["last_farm"].isoformat()
+
+        with open("balances.json", "w") as f:
+            json.dump(self.user_balances, f)
 
     def load_balances(self):
         try:
-            with open("user_data.json", "r") as f:
-                data_loaded = json.load(f)
-                # Convert datetime strings back to datetime objects
-                self.user_balances = {
-                    user: {
-                        "balance": data["balance"],
-                        "last_farm": datetime.fromisoformat(data["last_farm"])
-                        if data["last_farm"]
-                        else None,
-                    }
-                    for user, data in data_loaded.items()
-                }
+            with open("balances.json", "r") as f:
+                self.user_balances = json.load(f)
+            # Convert strings back to datetime objects
+            for user, data in self.user_balances.items():
+                if "last_farm" in data:
+                    data["last_farm"] = datetime.fromisoformat(data["last_farm"])
         except FileNotFoundError:
-            print("User data file does not exist, starting with empty balances.")
             self.user_balances = {}
 
 

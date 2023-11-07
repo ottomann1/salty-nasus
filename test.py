@@ -5,7 +5,7 @@ from riotapi import RiotApi
 class ApiTest:
     async def matchWin(self):
         x = await RiotApi.getMatchWin(
-            {"X-Riot-Token": "RGAPI-511f61b9-4dea-44b5-9e3d-04f68c2e6081"},
+            {"X-Riot-Token": "RGAPI-931f4d8a-327e-49de-b070-1621e36c2e19"},
             "6663249792",
             "0yzQ85TxyDM74eCUyBuQlrSrb21sTR9Z3yvnb-lYfOuEhxw",
         )
