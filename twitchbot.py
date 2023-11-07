@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timedelta
 
 # Define your bot's credentials and channel here
-TMI_TOKEN = ""
-CLIENT_ID = ""
-BOT_NICK = ""
+TMI_TOKEN = "oauth:pjgtujppwlnfopi6lm30r33h64fzje"
+CLIENT_ID = "0ykm7wjf2lgurc4t1kxdu2ivaushnb"
+BOT_NICK = "smokeyxxl"
 BOT_PREFIX = "!"
-CHANNEL = ""
-SUMMONER = ""
-RIOT_API_TOKEN = ""
+CHANNEL = "virrivadilli"
+SUMMONER = "LvL 2 Crook"
+RIOT_API_TOKEN = "RGAPI-d368e2e7-533e-4aa7-9f1c-7b78306f22fe"
 
 
 class Bot(commands.Bot):
