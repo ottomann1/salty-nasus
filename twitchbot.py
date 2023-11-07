@@ -95,7 +95,7 @@ class Bot(commands.Bot):
                     self.headers, self.gameId, self.summonerId
                 )
                 if participant.get("win") is not None:
-                    if participant["win"] == "true":
+                    if participant["win"] == True:
                         await self.resolve_bets("win")
                     else:
                         await self.resolve_bets("loss")
