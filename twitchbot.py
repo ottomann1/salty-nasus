@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timedelta
 
 # Define your bot's credentials and channel here
-TMI_TOKEN = "oauth:pjgtujppwlnfopi6lm30r33h64fzje"
-CLIENT_ID = "0ykm7wjf2lgurc4t1kxdu2ivaushnb"
-BOT_NICK = "smokeyxxl"
+TMI_TOKEN = ""
+CLIENT_ID = ""
+BOT_NICK = ""
 BOT_PREFIX = "!"
-CHANNEL = "virrivadilli"
-SUMMONER = "LvL 2 Crook"
-RIOT_API_TOKEN = "RGAPI-d368e2e7-533e-4aa7-9f1c-7b78306f22fe"
+CHANNEL = ""
+SUMMONER = ""
+RIOT_API_TOKEN = ""
 
 
 class Bot(commands.Bot):
@@ -200,6 +200,7 @@ class Bot(commands.Bot):
     @commands.command(name="balance")
     async def balance(self, ctx):
         balance = self.user_balances.get(ctx.author.name, 0)
+        balance = balance["balance"]
         await ctx.send(f"{ctx.author.name}, you have {balance} rejuvenation beads.")
 
     @commands.command(name="register")
@@ -268,7 +269,7 @@ class Bot(commands.Bot):
         # Create a message with the sorted balances
         message = "Top balances:\n"
         for index, (user, data) in enumerate(sorted_balances, start=1):
-            message += f"{index}. {user} - {data['balance']} rejuvenation beads\n"
+            message += f"{index}. {user} - {data['balance']} beads \n"
 
             # Send the message in chunks if it gets too long
             if len(message) >= 400:  # Twitch messages have a limit
