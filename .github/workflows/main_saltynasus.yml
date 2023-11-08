@@ -70,6 +70,6 @@ jobs:
           app-name: 'saltynasus'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_644A25DE8B8E495D8DCBA86336A52162 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_666FCF6E0BED4265BAE392305A96D388 }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
