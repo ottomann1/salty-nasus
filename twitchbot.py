@@ -3,15 +3,16 @@ from riotapi import RiotApi
 import asyncio
 import json
 from datetime import datetime, timedelta
+import os
 
 # Define your bot's credentials and channel here
-TMI_TOKEN = "oauth:pjgtujppwlnfopi6lm30r33h64fzje"
-CLIENT_ID = "0ykm7wjf2lgurc4t1kxdu2ivaushnb"
-BOT_NICK = "smokeyxxl"
-BOT_PREFIX = "!"
-CHANNEL = "virrivadilli"
-SUMMONER = "LvL 2 Crook"
-RIOT_API_TOKEN = "RGAPI-d368e2e7-533e-4aa7-9f1c-7b78306f22fe"
+TMI_TOKEN = os.getenv("TMI_TOKEN")
+CLIENT_ID = os.getenv("CLIENT_ID")
+BOT_NICK = os.getenv("BOT_NICK")
+BOT_PREFIX = os.getenv("BOT_PREFIX", "!")  # Default to '!' if not set
+CHANNEL = os.getenv("CHANNEL")
+SUMMONER = os.getenv("SUMMONER")
+RIOT_API_TOKEN = os.getenv("RIOT_API_TOKEN")
 
 
 class Bot(commands.Bot):
@@ -25,6 +26,7 @@ class Bot(commands.Bot):
         )
         self.bets = {}
         self.user_balances = {}
+        self.summonerId = ""
         self.is_accepting_bets = False
         self.summoner = SUMMONER
         self.headers = {"X-Riot-Token": RIOT_API_TOKEN}
@@ -75,11 +77,6 @@ class Bot(commands.Bot):
                         self.gameId = match["gameId"]
                         self.is_accepting_bets = True
                         await self.announce_bets_open()
-            else:
-                # If bets are being accepted, check if the match has concluded every so often
-                match = await RiotApi.getMatch(self.headers, self.summonerId)
-                if match.get("status") and match["status"]["status_code"] == 404:
-                    self.is_accepting_bets = False  # Match has ended, close bets
 
             await asyncio.sleep(30)  # Regular check every 10 seconds
 
